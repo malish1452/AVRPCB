@@ -16,16 +16,14 @@
 #include <string.h>
 
 
-
 int Vin;
 
 int stat;
 
 
 CANMessage CAN_incoming_buffer[40];
-void Task1 (void);
-void Task2 (void);
-void Task3 (void);
+void Process_CAN_Message (void);
+void renew_message (void);
 
 
 
@@ -74,7 +72,7 @@ ISR (INT4_vect)
 		LED_PORT0^=(1<<LED1);
 	}
 		can_read_message(&CAN_incoming_buffer[i],0);
-		SetTimerTask(Task1,1);
+		SetTimerTask(Process_CAN_Message,1);
 	
 	LED_PORT1 &= ~(1<<LED3);
 }
@@ -90,7 +88,7 @@ ISR (INT5_vect)
 	if (i<40)
 	{ 
 		can_read_message(&CAN_incoming_buffer[i],1);
-		SetTimerTask(Task1,100);
+		SetTimerTask(Process_CAN_Message,1);
 	}
 }
 
@@ -105,7 +103,7 @@ ISR (INT6_vect)
 	if (i<40)
 	{
 		can_read_message(&CAN_incoming_buffer[i],2);
-		SetTimerTask(Task1,50);
+		SetTimerTask(Process_CAN_Message,1);
 	}
 }
 
@@ -134,16 +132,6 @@ void readstats(uint8_t module)
 	sprintf(result,"CANINTF: %d",t);
 	UART_Add_Message(result);
 	
-	//t = mcp2515_read_register(CANINTF,1);
-	//sprintf(result,"CANINTF: %d",DDRB);
-	//UART_Add_Message(result);
-	//
-	//t = mcp2515_read_register(CANINTF,2);
-	//sprintf(result,"CANINTF: %d",);
-	//UART_Add_Message(result);
-	
-	
-	
 	t = mcp2515_read_register(CANCTRL,module);
 	sprintf(result,"CANCTRL: %d",t);
 	UART_Add_Message(result);
@@ -161,16 +149,14 @@ void readstats(uint8_t module)
 	UART_Add_Message(result);
 }
 
-void Task1 (void)
+void Process_CAN_Message (void)
 {	cli();
-	char result[70];
 	
 
 	while (CAN_incoming_buffer[0].id!=0)
 	{
-		sprintf(result,"{\"A\":\"%X\",\"B\":\"%X\",\"C\":[\"%X\",\"%X\",\"%X\",\"%X\",\"%X\",\"%X\",\"%X\",\"%X\"]}",CAN_incoming_buffer[0].id,CAN_incoming_buffer[0].length,CAN_incoming_buffer[0].data[0],CAN_incoming_buffer[0].data[1],CAN_incoming_buffer[0].data[2],CAN_incoming_buffer[0].data[3],CAN_incoming_buffer[0].data[4],CAN_incoming_buffer[0].data[5],CAN_incoming_buffer[0].data[6],CAN_incoming_buffer[0].data[7]);
-	//	UART_Add_Message(result);
-
+		
+		can_process_message(&CAN_incoming_buffer[0]);
 		uint8_t i=0;
 		while (CAN_incoming_buffer[i].id!=0)
 		{	i++;	
@@ -190,22 +176,23 @@ void Task1 (void)
 	sei();
 }
 
-void Task2(void)
+void start_SPI()
 {
-	SetTimerTask(Task3,5000);
+	
 	
 	MCP2515_init(0);
-	UART_Add_Message("--------");
+	//UART_Add_Message("--------");
 	MCP2515_init(1);
-	UART_Add_Message("--------");
+	//UART_Add_Message("--------");
 	MCP2515_init(2);
-	UART_Add_Message("--------");
+	//UART_Add_Message("--------");
+	SetTimerTask(renew_message,5000);
 	EIMSK|=(1<<INT4)|(1<<INT5)|(1<<INT6);
 }
 
 
 
-void Task3(void)
+void renew_message(void)
 {
 	//038A#43#00#00#00#00#00#00#00#
 	//03BA#0C#53#1A#80#00#31#C2#40#
@@ -219,7 +206,7 @@ void Task3(void)
 	stat++;
 	if (stat>5) stat=1;
 	send_message_monitor(0);
-	SetTimerTask(Task3,	2000);
+	SetTimerTask(renew_message,	2000);
 	sei();
 }
 
@@ -233,7 +220,7 @@ int main(void)
 	RunRTOS();
 	init_UART_Buffer();
 	init_SPI();
-	
+	start_SPI();
 	stat=1;
 	
 	for (uint8_t i =0 ; i<40;i++)
@@ -241,8 +228,8 @@ int main(void)
 		CAN_incoming_buffer[i].id=0;
 	}
 
-	SetTask(Task1);
-	SetTask(Task2);
+	SetTask(Process_CAN_Message);
+
 	
     /* Replace with your application code */
     while (1) 

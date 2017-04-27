@@ -38,26 +38,12 @@ uint8_t New_command_id;
 Command_Stack UART_Command_Stack;
 
 
-uint8_t CAR_125_28F[8];
-uint8_t CAR_125_290[8];
-uint8_t CAR_125_291[8];
-uint8_t CAR_125_03BA[8];
-uint8_t CAR_125_038A[8];
-uint8_t CAR_125_201[8];
-uint8_t CAR_125_400[8];
 
 
-
-//uint8_t MON_125_28F[8];
-//uint8_t MON_125_290[8];
-//uint8_t MON_125_291[8];
-uint8_t MON_125_03BA[8];
-uint8_t MON_125_038A[8];
-
-uint8_t MON_125_AVG[12]={65,118,103,58,32,50,48,46,48,32,76,32};		// 5-9 AAA.A  
-uint8_t MON_125_Momental[12]={77,111,109,58,32,50,48,46,48,32,76,32};	//5-9 AAA.A  
-uint8_t MON_125_Remain[12]={82,101,109,58,32,32,54,48,48,32,75,109};	//6-9 AAAA
-uint8_t MON_125_Speed[12]={32,32,49,50,48,46,48,32,75,109,47,104};		//3-7 AAA.A
+uint8_t MON_125_AVG[12]={65,118,103,58,32,50,48,46,48,32,76,32};		// 4-8 AAA.A  
+uint8_t MON_125_Momental[12]={77,111,109,58,32,50,48,46,48,32,76,32};	//4-8 AAA.A  
+uint8_t MON_125_Remain[12]={82,101,109,58,32,32,54,48,48,32,75,109};	//5-8 AAAA
+uint8_t MON_125_Speed[12]={32,49,50,48,46,48,48,32,75,109,47,104};		//1-6 AAA.AA
 uint8_t MON_125_Message[12]={84,69,83,84,32,77,69,83,83,65,71,69};
 
 uint8_t Resend_status; 
@@ -297,11 +283,6 @@ uint8_t spi_putc (uint8_t data)
 #pragma region MCP2515
 //‘ункции работы с MCP 2515
 
-// https://www.kvaser.com/support/calculators/bit-timing-calculator/
-// 125 KBPS 16MHZ  CNF1 03 CNF2 9a  CNF3 07 
-// 500 KBPS 16MHZ  CNF1 00 CNF2 9a  CNF3 07 
-
-
 void MCP2515_init(uint8_t module)
 {
 	    uint8_t oldSREG=SREG;
@@ -476,6 +457,62 @@ uint8_t can_send_message(CANMessage *p_message,uint8_t module)
 	
 }
 
+
+void can_process_message(CANMessage *p_message){
+	//38A  кондиционер - пр€ма€ пересылка (906)
+	//3BA кондиционер - пр€ма€ пересылка  (954)
+	
+	//201 ќбороты и скорость (513)
+	//400 ћаршрутник		 (1024)
+	
+	//28F Ёкран - пересылка в зависимости от режима	(655)
+	//290 Ёкран - пересылка в зависимости от режима (656)
+	//291 Ёкран - пересылка в зависимости от режима (657)
+	
+	if ((p_message->id==906)||(p_message->id==954))
+	{
+		can_send_message(p_message,0);
+	}
+
+	if (p_message->id==513)
+	{
+		//uint16_t RPM = p_message->data[0]*256+p_message->data[1];
+		uint16_t Speed = p_message->data[4]*256+p_message->data[5];
+		char strbuffer[5];
+		sprintf(strbuffer,"%d",Speed);
+		MON_125_Speed[1]=strbuffer[0];
+		MON_125_Speed[2]=strbuffer[1];
+		MON_125_Speed[3]=strbuffer[2];
+		MON_125_Speed[5]=strbuffer[3];
+		MON_125_Speed[6]=strbuffer[4];
+	}
+	
+	if (p_message->id==1024)
+	{
+		uint16_t Momental = p_message->data[2]*256+p_message->data[3];
+		uint16_t AVG = p_message->data[4];
+		uint16_t Remain = p_message->data[5]*256+p_message->data[6];
+		
+		char strbuffer[5];
+		sprintf(strbuffer,"%d",Momental);
+		MON_125_Momental[4]=strbuffer[0];
+		MON_125_Momental[5]=strbuffer[1];
+		MON_125_Momental[6]=strbuffer[2];
+		MON_125_Momental[8]=strbuffer[3];
+		
+		sprintf(strbuffer,"%d",AVG);
+		MON_125_AVG[4]=strbuffer[0];
+		MON_125_AVG[5]=strbuffer[1];
+		MON_125_AVG[6]=strbuffer[2];
+		MON_125_AVG[8]=strbuffer[3];
+		
+		sprintf(strbuffer,"%d",Remain);
+		MON_125_Remain[5]=strbuffer[0];
+		MON_125_Remain[6]=strbuffer[1];
+		MON_125_Remain[7]=strbuffer[2];
+		MON_125_Remain[8]=strbuffer[3];
+	}
+}
 
 
 

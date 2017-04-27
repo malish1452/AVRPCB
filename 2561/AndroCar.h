@@ -116,6 +116,7 @@ extern void mcp2515_release_module(uint8_t module);
 
 extern void mcp2515_init_send(uint8_t module,uint8_t buffer);
 extern uint8_t can_send_message(CANMessage *p_message,uint8_t module);
+extern void can_process_message(CANMessage *p_message);
 extern void MCP2515_init(uint8_t module);
 extern void mcp2515_soft_reset(uint8_t module);
 extern void mcp2515_write_register ( uint8_t address, uint8_t data, uint8_t module );
