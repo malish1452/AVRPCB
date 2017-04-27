@@ -13,7 +13,9 @@
 #include <util/delay.h>
 
 
-struct MCP2515 modules[2] ={{&PORT_CS,P_CS1,&PORTB,3,CAN125_16_CNF1,CAN125_16_CNF2,CAN125_16_CNF3},{&PORT_CS,P_CS2,&PORTB,3,CAN125_16_CNF1,CAN125_16_CNF2,CAN125_16_CNF3}};
+struct MCP2515 modules[3] ={{&PORT_CS,P_CS1,&PORT_RESET,P_RESET,CAN125_16_CNF1,CAN125_16_CNF2,CAN125_16_CNF3},
+							{&PORT_CS,P_CS2,&PORT_RESET,P_RESET,CAN125_16_CNF1,CAN125_16_CNF2,CAN125_16_CNF3},
+							{&PORT_CS,P_CS3,&PORT_RESET,P_RESET,CAN125_16_CNF1,CAN125_16_CNF2,CAN125_16_CNF3}};
 
 static char* UART1_Send_Buffer[UARTSendBufferSize];
 
@@ -265,8 +267,15 @@ void init_SPI()
 		DDR_SPI |= (1<<P_SCK)|(1<<P_MOSI)|(1<<P_SS);
 		PORT_SPI &= ~((1<<P_SCK)|(1<<P_MOSI));
 
-		DDR_CS |= (1<<P_CS1)|(1<<P_CS2);
-		PORT_CS |= (1<<P_CS1)|(1<<P_CS2);
+		DDR_CS |= (1<<P_CS1)|(1<<P_CS2)|(1<<P_CS3);
+		PORT_CS |= (1<<P_CS1)|(1<<P_CS2)|(1<<P_CS3);
+		
+		DDRE &=(0<<4)|(0<<5)|(0<<6);
+		PORTE|=(1<<4)|(1<<5)|(1<<6);
+			
+		DDRB|=(1<<P_RESET);
+		PORT_RESET|=(1<<P_RESET);
+
 		
 		SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPR0)|(0<<SPR1);
 		SPSR = (1<<SPI2X);
@@ -306,25 +315,41 @@ void MCP2515_init(uint8_t module)
 	mcp2515_write_register(CNF2,modules[module].cnf2_byte,module);
 	mcp2515_write_register(CNF3,modules[module].cnf3_byte,module);
 	
+	mcp2515_write_register(CANINTE,(1<<RX1IE)|(1<<RX0IE),module); 
+	
 	mcp2515_write_register(CANINTE,(1<<RX1IE)|(1<<RX0IE),module);
-	mcp2515_write_register( RXB0CTRL,(1<<RXM1)|(1<<RXM0),module); 
-	mcp2515_write_register( RXB1CTRL,(1<<RXM1)|(1<<RXM0),module); 
+	mcp2515_write_register( RXB0CTRL,(0<<RXM1)|(1<<RXM0)|(0<<BUKT),module); 
+	mcp2515_write_register( RXB1CTRL,(0<<RXM1)|(1<<RXM0),module); 
 	
 		
-	mcp2515_write_register( RXM0SIDH,0,module) ;
-	mcp2515_write_register( RXM0SIDL,0,module) ;
-	mcp2515_write_register( RXM0EID8,0,module) ;
+	mcp2515_write_register( RXM0SIDH,249,module) ;   //11111001 111
+
+	mcp2515_write_register( RXM0SIDL,224,module) ;
+	mcp2515_write_register( RXM0EID8,0,module) ;   
+
 	mcp2515_write_register( RXM0EID0,0,module) ;
 
-	mcp2515_write_register( RXM1SIDH,0,module) ;
-	mcp2515_write_register( RXM1SIDL,0,module) ;
+	mcp2515_write_register( RXM1SIDH,63,module) ;  //00111111
+	mcp2515_write_register( RXM1SIDL,192,module) ; //110
 	mcp2515_write_register( RXM1EID8,0,module) ;
 	mcp2515_write_register( RXM1EID0,0,module) ;
+	
+	mcp2515_write_register(RXF0SIDH,87,module);   //0101 0111
+	mcp2515_write_register(RXF0SIDL,224,module); //111
+
+	mcp2515_write_register(RXF1SIDH,119,module);   //0111 0111
+	mcp2515_write_register(RXF1SIDL,64,module); //010
+	
+	mcp2515_write_register(RXF2SIDH,0,module);   //0000 0000
+	mcp2515_write_register(RXF2SIDL,0,module); //000
+
+	mcp2515_write_register(RXF3SIDH,18,module);   //0001 0010
+	mcp2515_write_register(RXF3SIDL,0,module); //000	
 	
 	mcp2515_write_register(BFPCTRL,0,module);
 	mcp2515_write_register(TXRTSCTRL,0,module);
 	
-	mcp2515_bit_modify(CANCTRL,(1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0)|(1<<CLKPRE1)|(1<<CLKPRE0),0,module);
+	mcp2515_bit_modify(CANCTRL,(1<<REQOP2)|(1<<REQOP1)|(1<<REQOP0)|(1<<CLKEN)|(1<<CLKPRE1)|(1<<CLKPRE0),4,module);
 	
 	SREG=oldSREG;
 }

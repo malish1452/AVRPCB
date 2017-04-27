@@ -18,7 +18,7 @@
 #include <avr/wdt.h>
 
 //Clock Config
-#define F_CPU 8000000L
+#define F_CPU 16000000L
 
 //System Timer Config
 #define Prescaler	  		64
@@ -34,26 +34,8 @@
 
 
 //PORT Defines
-#define LED1 		3
-#define LED2		4
-#define	LED3		5
-#define	LED4		2
 
-#define LED_PORT 	PORTE
-#define LED_DDR		DDRE
 
-#define DDR_SPI  DDRB
-#define DDR_CS  DDRB
-
-#define PORT_SPI  PORTB
-#define PORT_CS  PORTB
-
-#define P_SCK		1
-#define P_MOSI		2
-#define P_MISO		3
-#define P_SS		0
-#define P_CS1		4
-#define P_CS2		5
 
 
 extern void InitAll(void);

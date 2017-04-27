@@ -6,6 +6,7 @@
  */ 
 
 #include "HAL.h"
+#include "AndroCar.h"
 
 
 
@@ -21,12 +22,10 @@ inline void InitAll(void)
 	UCSR1C=0b10000110;
 	
 	//InitPort
-	LED_DDR |= 1<<LED1|1<<LED2|1<<LED3;
+	LED_DDR0 |= 1<<LED1|1<<LED2;
+	LED_DDR1 |= 1<<LED3|1<<LED4;
 	
 	//InitInt
-	
-	DDRD &=(0<<0)|(0<<1);
-	PORTD|=(1<<0)|(1<<1);
 	
 
 	//InitADC

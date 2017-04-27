@@ -29,6 +29,35 @@
 #define CAN500_16_CNF2 (1<<BTLMODE)|(1<<SAM)|(1<<PHSEG12)|(1<<PHSEG11)|(0<<PHSEG10)|(0<<PRSEG2)|(0<<PRSEG1)|(0<<PRSEG0) //1111 0000
 #define CAN500_16_CNF3 (0<<SOF)|(0<<WAKFIL)|(1<<PHSEG22)|(1<<PHSEG21)|(0<<PHSEG20) // 1000 0110
 
+#define LED1 		0
+#define LED2		1
+#define	LED3		0
+#define	LED4		1
+
+#define LED_PORT0 	PORTG
+#define LED_DDR0		DDRG
+
+#define LED_PORT1 	PORTC
+#define LED_DDR1		DDRC
+
+
+#define DDR_SPI  DDRB
+#define PORT_SPI  PORTB
+
+#define DDR_CS  DDRB
+#define PORT_CS  PORTB
+
+#define P_SCK		1
+#define P_MOSI		2
+#define P_MISO		3
+#define P_SS		0
+#define P_CS1		6
+#define P_CS2		5
+#define P_CS3		4
+
+#define PORT_RESET PORTB
+#define P_RESET 7
+
 
 
 
