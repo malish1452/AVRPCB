@@ -24,8 +24,7 @@ uint8_t Vin_mode;
 int stat;
 
 
-uint16_t media_state;
-uint16_t prev_media_state;
+
 uint16_t media_state_counter;
 uint8_t  media_state_counter_resume;
 uint8_t  media_button; //0- nothing 1-+ 2-- 3-up 4-down 5-mode 6-mute
@@ -33,6 +32,9 @@ uint8_t  media_button; //0- nothing 1-+ 2-- 3-up 4-down 5-mode 6-mute
 #define Can_MAX  40
 
 uint8_t media_button_buffer[5][2]={{0,0},{0,0},{0,0},{0,0},{0,0}}; //{button,length(0-small|1-long)}
+uint16_t ADC_inputs [2][3] = {{ADC_MEDIA,0,0},{ADC_CRUISE,0,0}}; //ADCPin, ADC cycle to skip , prevousVin
+uint8_t current_ADC_input;
+uint8_t ADC_ready;
 
 CANMessage CAN_incoming_buffer[Can_MAX];
 uint8_t oldState,repeatState;
@@ -55,44 +57,46 @@ ISR(ADC_vect)
 {
 	uint16_t Vin;
 	Vin=ADC;
-	media_state=((float)Vin/0.8291);
+	Vin=((float)Vin/0.8291);
 	int16_t delta;
-	delta=abs(prev_media_state-media_state);
+	delta=abs(ADC_inputs[current_ADC_input][2]-Vin);
 	if (delta>100)
 	{
 		Vin_mode=1;
-		prev_media_state=media_state;
-		UART_Add_Message("Vin changed");
-		char result[20];
-		sprintf(result,"Vin: %d",media_state);
-		UART_Add_Message(result);
-		media_state_counter_resume=0;
-		SetTimerTask(reenable_ADC,100);
+		ADC_inputs[current_ADC_input][2]=Vin;
+		if (current_ADC_input==0)
+		{
+			media_state_counter_resume=0;
+		}
+
+		ADC_inputs[current_ADC_input][1]=10;
 	}
 	else
 	{
 		if (Vin_mode==1)
 		{
-			media_state_counter=0;
-			media_state_counter_resume=1;
-			SetTimerTask(count_media,1);
-			if (media_state>940)
-			{
-				media_button=3;
-			}
-			else if (media_state>630)
-			{
-				media_button=1;
-			} 
-			else
-			{
-				media_button=2;
-			}
+			if (current_ADC_input==0)
+				{
+					media_state_counter=0;
+					media_state_counter_resume=1;
+					SetTimerTask(count_media,1);
+					if (Vin>940)
+						{
+							media_button=0;
+						}
+					else if (Vin>630)
+							{
+								media_button=1;
+							}
+						 else
+							{
+								media_button=2;
+							}
+				}
 			Vin_mode=0;
 		}
-		SetTimerTask(reenable_ADC,10);
-
 	}
+	ADC_ready=1;
 }
 
 ISR (USART1_UDRE_vect) //Опустошение буфера
@@ -170,7 +174,31 @@ ISR (INT6_vect)
 
 void reenable_ADC(void)
 {
-	ADCSRA|=(1<<ADSC);
+	cli();
+	if (ADC_ready==1)
+	{
+		if (current_ADC_input==0)
+		{
+			current_ADC_input=1;
+		} 
+		else
+		{
+			current_ADC_input=0;
+		}
+		if (ADC_inputs[current_ADC_input][1]==0)
+		{
+			ADMUX|=64+ADC_inputs[current_ADC_input][0];
+			ADCSRA|=(1<<ADSC);
+			ADC_ready=0;
+		}
+		else
+		{
+			ADC_inputs[current_ADC_input][1]--;	
+		}
+		
+	}
+	SetTimerTask(reenable_ADC,5);
+	sei();
 }
 
 void count_media(void)
@@ -221,9 +249,6 @@ void media_sender(void)
 	char result[50];
 	sprintf(result,"{\"id\":1, \"duration\":%d, \"buttons\": [",media_button_buffer[0][1]);
 	uint8_t i=0;
-	char msg [30];
-	sprintf(msg,"Sender: i=%d, [i][0]=%d",i,media_button_buffer[i][0]);
-	UART_Add_Message(msg);
 	while ((media_button_buffer[i][0]>0)&&(i<5))
 	{
 		
@@ -239,6 +264,11 @@ void media_sender(void)
 	}
 	strcat(result," ] }");	
 	if (need_to_send==1){
+		for (int8_t k=1;k<5;k++)
+		{
+			media_button_buffer[k][0]=0;
+			media_button_buffer[k][1]=0;
+		}
 		UART_Add_Message(result);		
 	}
 	
@@ -384,9 +414,12 @@ int main(void)
 	PORTF=0;
 	
 	Vin_mode=0;
-	ADMUX|=64+ADC_MEDIA;
+	
 	media_state_counter=0;
-	ADCSRA|=(1<<ADSC);
+	current_ADC_input=0;
+	ADC_ready=1;
+	reenable_ADC();
+	//ADCSRA|=(1<<ADSC);
 	for (uint8_t i =0 ; i<Can_MAX;i++)
 	{
 		CAN_incoming_buffer[i].id=0;
