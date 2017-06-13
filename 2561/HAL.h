@@ -26,8 +26,8 @@
 
 
 //USART Config
-#define baudrate 9600L
-#define bauddivider (F_CPU/(16*baudrate)-1)
+#define baudrate 115200L
+#define bauddivider (F_CPU/(16*baudrate))  //somehow -1 brings errors on high speed;
 #define HI(x) ((x)>>8)
 #define LO(x) ((x)& 0xFF)
 

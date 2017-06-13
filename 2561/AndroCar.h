@@ -47,6 +47,12 @@
 #define DDR_CS  DDRB
 #define PORT_CS  PORTB
 
+#define PORT_MEDIA PORTC
+#define DDR_MEDIA DDRC
+
+#define ADC_MEDIA 7
+#define ADC_CRUISE 6
+
 #define P_SCK		1
 #define P_MOSI		2
 #define P_MISO		3
@@ -127,4 +133,5 @@ extern uint8_t mcp2515_read_rx_status ( uint8_t module);
 extern void send_message_monitor(uint8_t module);
 extern uint8_t can_read_message(CANMessage * p_message,uint8_t module);
 extern void change_resend(uint8_t new_status);
+extern uint8_t get_new_msg_state();
 #endif /* ANDROCAR_H_ */

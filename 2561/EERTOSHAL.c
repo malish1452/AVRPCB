@@ -15,5 +15,5 @@ inline void RunRTOS (void)
 	OCR2A  = LO(TimerDivider); 				// Установить значение в регистр сравнения
 	TIMSK2 = 0<<TOIE2|1<<OCIE2A;		        // Разрешаем прерывание RTOS - запуск ОС
 
-	sei();
+	//sei();
 }

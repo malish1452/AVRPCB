@@ -38,13 +38,31 @@ uint8_t New_command_id;
 Command_Stack UART_Command_Stack;
 
 
+char monitor_current_message[13]={32,32,32,32,32,32,32,32,32,32,32,32}; 
+char monitor_current_setup[8]={128,0,0,0,0,0,0,0};
+char monitor_default_setup[8]={128,0,0,0,0,0,0,0};
+
+uint16_t car_previous_msg=0;
+uint8_t car_new_msg_flag=0;
+
+char phone_message[13]={32,65,110,100,114,111,95,67,97,114,32,32,32};
+char phone_setup[8]={128,0,0,0,0,0,0,0};	
+	
+char car_current_message[13]={32,32,32,32,32,32,32,32,32,32,32,32};
+char car_monitor_setup[8]={0,0,0,0,0,0,0,0};
+double current_speed=23.34;
+double momental_fuel=0.01;
+uint8_t momental_fuel_resume =0;
+double average_fuel=14.5;
+uint16_t distance_left=1328;
+uint16_t current_rpm=1;
 
 
-uint8_t MON_125_AVG[12]={65,118,103,58,32,50,48,46,48,32,76,32};		// 4-8 AAA.A  
-uint8_t MON_125_Momental[12]={77,111,109,58,32,50,48,46,48,32,76,32};	//4-8 AAA.A  
-uint8_t MON_125_Remain[12]={82,101,109,58,32,32,54,48,48,32,75,109};	//5-8 AAAA
-uint8_t MON_125_Speed[12]={32,49,50,48,46,48,48,32,75,109,47,104};		//1-6 AAA.AA
-uint8_t MON_125_Message[12]={84,69,83,84,32,77,69,83,83,65,71,69};
+//uint8_t MON_125_AVG[12]={65,118,103,58,32,50,48,46,48,32,76,32};		// 4-8 AAA.A  
+//uint8_t MON_125_Momental[12]={77,111,109,58,32,50,48,46,48,32,76,32};	//4-8 AAA.A  
+//uint8_t MON_125_Remain[12]={82,101,109,58,32,32,54,48,48,32,75,109};	//5-8 AAAA
+//uint8_t MON_125_Speed[12]={32,49,50,48,46,48,48,32,75,109,47,104};		//1-6 AAA.AA
+//uint8_t MON_125_Message[12]={84,69,83,84,32,77,69,83,83,65,71,69};
 
 uint8_t Resend_status; 
 /*	
@@ -59,7 +77,8 @@ uint8_t Resend_status;
 	[010]	-	Show momental fuel
 	[011]	-	Show remain fuel
 	[100]	-	Show momental speed
-	[101]	-	Message from Phone
+	[101]	-	RPM
+	[110]	-	Message from Phone
 	
 	Phone symbol
 	
@@ -210,12 +229,12 @@ void UART_Add_Message(char *s)
 
 void UART_Command_Processor()
 {
-	
+	 uint8_t oldSREG=SREG;
+	 cli();
 	
 	if (UART_Command_Stack.size>0)
 	{
-		    uint8_t oldSREG=SREG;
-		    cli();
+		   
 		    
 		//Ќиже должна быть обработка команд согласно идентификатору
 		char line[50];
@@ -237,10 +256,10 @@ void UART_Command_Processor()
 			UART_Command_Stack.ID[i]=UART_Command_Stack.ID[i+1];
 			strcpy(UART_Command_Stack.parameter[i],UART_Command_Stack.parameter[i+1]);
 		}
-		SREG=oldSREG;
+		
 	}
 	
-	
+	SREG=oldSREG;
 }
 
 #pragma endregion –абота с UART
@@ -457,6 +476,12 @@ uint8_t can_send_message(CANMessage *p_message,uint8_t module)
 	
 }
 
+uint8_t get_new_msg_state()
+{
+	uint8_t res=car_new_msg_flag;
+	car_new_msg_flag=0;
+	return res;
+}
 
 void can_process_message(CANMessage *p_message){
 	//38A  кондиционер - пр€ма€ пересылка (906)
@@ -469,48 +494,81 @@ void can_process_message(CANMessage *p_message){
 	//290 Ёкран - пересылка в зависимости от режима (656)
 	//291 Ёкран - пересылка в зависимости от режима (657)
 	
-	if ((p_message->id==906)||(p_message->id==954))
+	if ((p_message->id==0x38a)||(p_message->id==0x3ba))
 	{
 		can_send_message(p_message,0);
 	}
 
 	if (p_message->id==513)
 	{
-		//uint16_t RPM = p_message->data[0]*256+p_message->data[1];
-		uint16_t Speed = p_message->data[4]*256+p_message->data[5];
-		char strbuffer[5];
-		sprintf(strbuffer,"%d",Speed);
-		MON_125_Speed[1]=strbuffer[0];
-		MON_125_Speed[2]=strbuffer[1];
-		MON_125_Speed[3]=strbuffer[2];
-		MON_125_Speed[5]=strbuffer[3];
-		MON_125_Speed[6]=strbuffer[4];
+		current_rpm = p_message->data[0]*256+p_message->data[1];
+		current_speed = (double)(p_message->data[4]*256+p_message->data[5])/100;
 	}
 	
-	if (p_message->id==1024)
+	if (p_message->id==0x400)
+	{   if (p_message->data[2]!=0xff)
+		{
+		momental_fuel = (double)(p_message->data[2]*256+p_message->data[3])/10;
+		momental_fuel_resume=0;
+		}
+		else
+		{
+			momental_fuel=(double)1;
+			momental_fuel_resume=1;
+		}
+		average_fuel = (double)(p_message->data[5])/10;
+		distance_left = p_message->data[6]*256+p_message->data[7];
+	}
+	
+	if (p_message->id==0x28f)
 	{
-		uint16_t Momental = p_message->data[2]*256+p_message->data[3];
-		uint16_t AVG = p_message->data[4];
-		uint16_t Remain = p_message->data[5]*256+p_message->data[6];
-		
-		char strbuffer[5];
-		sprintf(strbuffer,"%d",Momental);
-		MON_125_Momental[4]=strbuffer[0];
-		MON_125_Momental[5]=strbuffer[1];
-		MON_125_Momental[6]=strbuffer[2];
-		MON_125_Momental[8]=strbuffer[3];
-		
-		sprintf(strbuffer,"%d",AVG);
-		MON_125_AVG[4]=strbuffer[0];
-		MON_125_AVG[5]=strbuffer[1];
-		MON_125_AVG[6]=strbuffer[2];
-		MON_125_AVG[8]=strbuffer[3];
-		
-		sprintf(strbuffer,"%d",Remain);
-		MON_125_Remain[5]=strbuffer[0];
-		MON_125_Remain[6]=strbuffer[1];
-		MON_125_Remain[7]=strbuffer[2];
-		MON_125_Remain[8]=strbuffer[3];
+		car_monitor_setup[0]=p_message->data[0];
+		car_monitor_setup[1]=p_message->data[1];
+		car_monitor_setup[2]=p_message->data[2];
+		car_monitor_setup[3]=p_message->data[3];
+		car_monitor_setup[4]=p_message->data[4];
+		car_monitor_setup[5]=p_message->data[5];
+		car_monitor_setup[6]=p_message->data[6];
+		car_monitor_setup[7]=p_message->data[7];
+	}
+	if (p_message->id==0x290)
+	{
+		car_current_message[0]=p_message->data[1];
+		car_current_message[1]=p_message->data[2];
+		car_current_message[2]=p_message->data[3];
+		car_current_message[3]=p_message->data[4];
+		car_current_message[4]=p_message->data[5];
+		car_current_message[5]=p_message->data[6];
+		car_current_message[6]=p_message->data[7];
+		uint16_t new_sum =0;
+		for (int i=0;i<12;i++)
+		{
+			new_sum=new_sum+car_current_message[i];
+		}
+		if (new_sum!=car_previous_msg)
+		{
+			car_new_msg_flag=1;
+			car_previous_msg=new_sum;
+		}
+	}
+	if (p_message->id==0x291)
+	{
+		car_current_message[7]=p_message->data[1];
+		car_current_message[8]=p_message->data[2];
+		car_current_message[9]=p_message->data[3];
+		car_current_message[10]=p_message->data[4];
+		car_current_message[11]=p_message->data[5];
+		car_current_message[12]=p_message->data[6];
+		uint16_t new_sum =0;
+		for (int i=0;i<12;i++)
+		{
+			new_sum=new_sum+car_current_message[i];
+		}
+		if (new_sum!=car_previous_msg)
+		{
+			car_new_msg_flag=1;
+			car_previous_msg=new_sum;
+		}
 	}
 }
 
@@ -596,80 +654,126 @@ void mcp2515_bit_modify ( uint8_t address, uint8_t mask, uint8_t data , uint8_t 
 
 #pragma region –абота с экраном
 
+
 void change_resend(uint8_t new_status)
 {
+	//char message[12];
+	uint16_t tempvalint1,tempvalint2;
+	
+	if (new_status==0)
+	{
+		for (int i=0;i<8;i++)
+		{
+			monitor_current_setup[i]=car_monitor_setup[i];
+		}			
+	
+		for (int i=0;i<12;i++)
+		{
+			monitor_current_message[i]=car_current_message[i];
+		}
+	}
+	
+	if (new_status>0)
+	{
+		for (int8_t i=0;i<8;i++)
+		{
+			monitor_current_setup[i]=monitor_default_setup[i];
+		}
+	}
+		
+		
+	if (new_status==1)
+	{
+		tempvalint1=average_fuel;
+		tempvalint2=trunc((average_fuel-tempvalint1)*10);
+		sprintf(monitor_current_message,"Avg: %3d.%01d L",tempvalint1,tempvalint2);
+	}
+
+	if (new_status==2)
+	{
+		tempvalint1=momental_fuel;
+		tempvalint2=trunc((momental_fuel-tempvalint1)*10);
+		if (momental_fuel_resume==0)
+		{
+			sprintf(monitor_current_message,"Mom:%3d.%01d L",tempvalint1,tempvalint2);
+		} 
+		else
+		{
+			sprintf(monitor_current_message,"Mom: 1.0 L/h");
+		}
+		
+	}
+
+	if (new_status==3)
+	{
+		sprintf(monitor_current_message,"Rem: %4d Km",distance_left);
+	}
+
+	if (new_status==4)
+	{
+		tempvalint1=current_speed;
+		tempvalint2=trunc((current_speed-tempvalint1)*100);
+		sprintf(monitor_current_message," %3d.%02d Km/h",tempvalint1,tempvalint2);	
+	}
+
+	if (new_status==5)
+	{
+		sprintf(monitor_current_message,"RPM:  %4d  ",current_rpm);
+	}
+	
+	if (new_status==6)
+	{
+	   for (uint8_t i=0;i<12;i++)
+	   {
+		   monitor_current_message[i]=phone_message[i];
+	   }
+	}
+	
 	Resend_status=new_status;
 }
 
 
-void send_message_monitor(uint8_t module)
+void send_message_monitor(uint8_t module)																																																																																																																																																																																																																																																																																																																																																																							
 {
 		CANMessage message;
 		
 		message.id=0x28f;
 		message.rtr=0;
 		message.length=8;
-		message.data[0]=(1<<7);
-		message.data[1]=0x00;
-		message.data[2]=0x00;
-		message.data[3]=0x00;
-		message.data[4]=0x00;
-		message.data[5]=0x00;
-		message.data[6]=0x00;
-		message.data[7]=0x00;
+		message.data[0]=monitor_current_setup[0];
+		message.data[1]=monitor_current_setup[1];
+		message.data[2]=monitor_current_setup[2];
+		message.data[3]=monitor_current_setup[3];
+		message.data[4]=monitor_current_setup[4];
+		message.data[5]=monitor_current_setup[5];
+		message.data[6]=monitor_current_setup[6];
+		message.data[7]=monitor_current_setup[7];
 		
 		can_send_message(&message,module);
-		
-		uint8_t *msg;
-		
-		uint8_t msg_set = ((Resend_status<<5)>>5);
-		
-		if(msg_set==1)
-		{
-			msg=MON_125_AVG;
-		}
-		else if (msg_set==2)
-		{
-			msg=MON_125_Momental;
-		} 
-		else if (msg_set==3)
-		{
-			msg=MON_125_Remain;
-		}
-		else if (msg_set==4)
-		{
-			msg=MON_125_Speed;
-		}
-		else if (msg_set==5)
-		{
-			msg=MON_125_Message;
-		}
-		
 		
 		message.id=0x290;
-		message.data[0]=0xC0;
-		message.data[1]=msg[0];
-		message.data[2]=msg[1];
-		message.data[3]=msg[2];
-		message.data[4]=msg[3];
-		message.data[5]=msg[4];
-		message.data[6]=msg[5];
-		message.data[7]=msg[6];
+		message.data[0]=128;
+		message.data[1]=monitor_current_message[0];
+		message.data[2]=monitor_current_message[1];
+		message.data[3]=monitor_current_message[2];
+		message.data[4]=monitor_current_message[3];
+		message.data[5]=monitor_current_message[4];
+		message.data[6]=monitor_current_message[5];
+		message.data[7]=monitor_current_message[6];
 				
 		can_send_message(&message,module);
+		
 		message.id=0x291;
 		message.data[0]=0x87;
-		message.data[1]=msg[7];
-		message.data[2]=msg[8];
-		message.data[3]=msg[9];
-		message.data[4]=msg[10];
-		message.data[5]=msg[11];
-		message.data[6]=msg[12];
+		message.data[1]=monitor_current_message[7];
+		message.data[2]=monitor_current_message[8];
+		message.data[3]=monitor_current_message[9];
+		message.data[4]=monitor_current_message[10];
+		message.data[5]=monitor_current_message[11];
+		message.data[6]=0x20;
 		message.data[7]=0x20;
 		
-		can_send_message(&message,module);
-
-		
+		can_send_message(&message,module);		
 };
 
 uint8_t can_read_message(CANMessage * p_message,uint8_t module)
