@@ -6,6 +6,8 @@
  */ 
 
 
+// RTOS - Thanks for DI HALT http://easyelectronics.ru/
+
 
 #include <avr/io.h>
 #include "HAL.h"
@@ -17,20 +19,20 @@
 #include <math.h>
 
 
-int16_t Vmedia;
-int16_t Vcruise;
-int16_t count;
 
-float resV;
-int8_t Vin_mode;
+uint8_t Vin_mode;
 int stat;
 
-int16_t media_state;
-int16_t prev_media_state;
-int16_t media_state_counter;
-int8_t  media_state_counter_resume;
+
+uint16_t media_state;
+uint16_t prev_media_state;
+uint16_t media_state_counter;
+uint8_t  media_state_counter_resume;
+uint8_t  media_button; //0- nothing 1-+ 2-- 3-up 4-down 5-mode 6-mute
 
 #define Can_MAX  40
+
+uint8_t media_button_buffer[5][2]={{0,0},{0,0},{0,0},{0,0},{0,0}}; //{button,length(0-small|1-long)}
 
 CANMessage CAN_incoming_buffer[Can_MAX];
 uint8_t oldState,repeatState;
@@ -39,6 +41,7 @@ void renew_message (void);
 void reenable_ADC(void);
 void return_state(void);
 void count_media(void);
+void media_sender(void);
 
 
 
@@ -59,27 +62,36 @@ ISR(ADC_vect)
 	{
 		Vin_mode=1;
 		prev_media_state=media_state;
+		UART_Add_Message("Vin changed");
 		char result[20];
-		sprintf(result,"Time: %d",media_state_counter);
+		sprintf(result,"Vin: %d",media_state);
 		UART_Add_Message(result);
 		media_state_counter_resume=0;
+		SetTimerTask(reenable_ADC,100);
 	}
 	else
 	{
 		if (Vin_mode==1)
 		{
-			char result[20];
-			sprintf(result,"Vin: %d",Vin);
-			UART_Add_Message(result);
 			media_state_counter=0;
 			media_state_counter_resume=1;
-			SetTimerTask(count_media,100);
+			SetTimerTask(count_media,1);
+			if (media_state>940)
+			{
+				media_button=3;
+			}
+			else if (media_state>630)
+			{
+				media_button=1;
+			} 
+			else
+			{
+				media_button=2;
+			}
+			Vin_mode=0;
 		}
-		Vin_mode=0;
 		SetTimerTask(reenable_ADC,10);
-		media_state_counter_resume=0;
-		//SetTimerTask(count_media,0);
-		prev_media_state=media_state;	
+
 	}
 }
 
@@ -132,7 +144,6 @@ ISR (INT5_vect)
 	if (i>=Can_MAX)
 	{
 		i=Can_MAX-1;
-		
 	}
 		can_read_message(&CAN_incoming_buffer[i],1);
 		SetTimerTask(Process_CAN_Message,11);
@@ -165,12 +176,72 @@ void reenable_ADC(void)
 void count_media(void)
 {
 	cli();
+	
 	media_state_counter=media_state_counter+1;
-	if (media_state_counter_resume==1)
+	if ((media_state_counter_resume==1)&&(media_state_counter<=1000))
 	{
-	SetTimerTask(count_media,100);
+	SetTimerTask(count_media,1);
 	}
-	//UART_Add_Message("!!!");
+	else
+	{
+		
+		if (media_button>=0)
+		{
+			uint8_t length=0;
+			if (media_state_counter>1000) 
+			{
+				length=1;
+				media_sender();
+			}
+			uint8_t i=0;
+			while ((i<5)&&(media_button_buffer[i][0]>0))
+			{
+				i++;
+			}
+				media_button_buffer[i][0]=media_button;
+				media_button_buffer[i][1]=length;
+			if ((i==4)||(length=1))
+			{
+				media_sender();
+			}
+			else
+			{
+				SetTimerTask(media_sender,1500);	
+			}
+		}
+	}
+		
+	sei();
+}
+
+void media_sender(void)
+{
+	cli();
+	uint8_t need_to_send=0;
+	char result[50];
+	sprintf(result,"{\"id\":1, \"duration\":%d, \"buttons\": [",media_button_buffer[0][1]);
+	uint8_t i=0;
+	char msg [30];
+	sprintf(msg,"Sender: i=%d, [i][0]=%d",i,media_button_buffer[i][0]);
+	UART_Add_Message(msg);
+	while ((media_button_buffer[i][0]>0)&&(i<5))
+	{
+		
+		char temp[2];
+		sprintf(temp," %d",media_button_buffer[0][0]);
+		strcat(result,temp);
+		need_to_send=1;
+		i++;
+		if ((media_button_buffer[i][0]>0)&&(i<5))
+		{
+			strcat(result,",");
+		}
+	}
+	strcat(result," ] }");	
+	if (need_to_send==1){
+		UART_Add_Message(result);		
+	}
+	
 	sei();
 }
 
@@ -325,7 +396,8 @@ int main(void)
 	//show_counter();
 		SetTask(Process_CAN_Message);
 	media_state_counter_resume=0;
-	SetTask(count_media);
+	media_state_counter=0;
+//	SetTask(count_media);
 	
     while (1) 
     {
