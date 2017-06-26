@@ -45,7 +45,8 @@ void return_state(void);
 void count_media(void);
 void media_sender(void);
 
-
+uint8_t button;
+uint8_t media_mode;
 
 
 ISR(RTOS_ISR) //Событие таймера
@@ -345,15 +346,15 @@ void Process_CAN_Message (void)
 
 void start_SPI()
 {
-	cli();
+	cli();UART_Add_Message("0-------");
 	
 	MCP2515_init(0);
-	UART_Add_Message("--------");
+	UART_Add_Message("1--------");
 	MCP2515_init(1);
-	UART_Add_Message("--------");
+	UART_Add_Message("2--------");
 	MCP2515_init(2);
-	UART_Add_Message("--------");
-	SetTimerTask(renew_message,50);
+	UART_Add_Message("3--------");
+//	SetTimerTask(renew_message,50);
 	EIMSK|=(1<<INT4)|(1<<INT5)|(1<<INT6);
 	sei();
 }
@@ -389,9 +390,46 @@ void renew_message(void)
 		} 
 	}
     send_message_monitor(0);
-	SetTimerTask(renew_message,	100);
+	SetTimerTask(renew_message,	1000);
 	SREG=oldSREG;
 }
+
+void pushmedia(void)
+{
+	if (media_mode==0) 
+	{
+		if (button==0)
+		{
+			button=1;
+		}
+		else
+		{
+			button=button<<1;
+		}
+		char result[8];
+		sprintf(result,"button:%d",button);
+		UART_Add_Message(result);
+		
+		PORTC=button;
+	}
+	else
+	{
+		PORTC=0;
+		UART_Add_Message("release");
+	}
+	
+	if (media_mode==0)
+	{
+		media_mode=1;
+		SetTimerTask(pushmedia,40);
+	}
+	else
+	{
+		media_mode=0;
+		SetTimerTask(pushmedia,1000);
+	}	
+}
+
 
 void return_state (void)
 {
@@ -401,11 +439,15 @@ void return_state (void)
 }
 
 int main(void)
-{
+{	
+	button=0;
+	media_mode=0;
+	DDRC|=(1<<0)|(1<<1)|(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6)|(1<<7);
 	InitAll();
 	InitRTOS();
 	RunRTOS();
 	init_UART_Buffer();
+	UART_Add_Message("start");
 	stat=1;
 	DDRC|=(1<<2)|(1<<3)|(1<<4)|(1<<5)|(1<<6)|(1<<7);
 	DDRD|=(0<<4)|(0<<5)|(0<<6)|(0<<7);
@@ -419,6 +461,7 @@ int main(void)
 	current_ADC_input=0;
 	ADC_ready=1;
 	reenable_ADC();
+	pushmedia();
 	//ADCSRA|=(1<<ADSC);
 	for (uint8_t i =0 ; i<Can_MAX;i++)
 	{
