@@ -149,18 +149,14 @@ void UART_Char_Received()
 			New_command_id=received_char;
 			New_command[0]='\0';
 			New_command_receive_status=1;
-			
 		}
 		else
 		{
-		
 			if (!(received_char=='\n')&&(New_command_parameter_length<(UARTCommandLength-1)))
 			{
-				
 				New_command[New_command_parameter_length]=received_char;
 				New_command_parameter_length++;
 				New_command[New_command_parameter_length]='\0';
-				
 			}
 			else
 			{
@@ -173,8 +169,6 @@ void UART_Char_Received()
 				}
 			}	
 		}
-						
-		
 }
 
 void init_UART_Buffer()
@@ -280,13 +274,9 @@ void init_SPI()
 			
 		DDRB|=(1<<P_RESET);
 		PORT_RESET|=(1<<P_RESET);
-
 		
 		SPCR = (1<<SPE)|(1<<MSTR)|(0<<SPR0)|(0<<SPR1);
 		SPSR = (1<<SPI2X);
-		
-		
-		
 }
 
 uint8_t spi_putc (uint8_t data)
@@ -304,13 +294,12 @@ uint8_t spi_putc (uint8_t data)
 
 void MCP2515_init(uint8_t module)
 {
-	    uint8_t oldSREG=SREG;
-	    cli();
+	uint8_t oldSREG=SREG;
+	
+	cli();
 	    
 	mcp2515_soft_reset(module);
-	
-	
-	
+		
 	mcp2515_write_register(CNF1,modules[module].cnf1_byte,module);
 	mcp2515_write_register(CNF2,modules[module].cnf2_byte,module);
 	mcp2515_write_register(CNF3,modules[module].cnf3_byte,module);

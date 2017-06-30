@@ -43,7 +43,8 @@ C_SRCS +=  \
 ../EERTOSHAL.c \
 ../HAL.c \
 ../main.c \
-../trash.c
+../trash.c \
+../TWI.c
 
 
 PREPROCESSING_SRCS += 
@@ -58,7 +59,8 @@ EERTOS.o \
 EERTOSHAL.o \
 HAL.o \
 main.o \
-trash.o
+trash.o \
+TWI.o
 
 OBJS_AS_ARGS +=  \
 AndroCar.o \
@@ -66,7 +68,8 @@ EERTOS.o \
 EERTOSHAL.o \
 HAL.o \
 main.o \
-trash.o
+trash.o \
+TWI.o
 
 C_DEPS +=  \
 AndroCar.d \
@@ -74,7 +77,8 @@ EERTOS.d \
 EERTOSHAL.d \
 HAL.d \
 main.d \
-trash.d
+trash.d \
+TWI.d
 
 C_DEPS_AS_ARGS +=  \
 AndroCar.d \
@@ -82,7 +86,8 @@ EERTOS.d \
 EERTOSHAL.d \
 HAL.d \
 main.d \
-trash.d
+trash.d \
+TWI.d
 
 OUTPUT_FILE_PATH +=2561.elf
 
@@ -98,6 +103,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

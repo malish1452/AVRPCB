@@ -183,6 +183,12 @@
     <Compile Include="trash.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="TWI.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="TWI.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Manager" />

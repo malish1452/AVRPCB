@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include "TWI.h"
 
 
 
@@ -47,7 +48,6 @@ void media_sender(void);
 
 uint8_t button;
 uint8_t media_mode;
-
 
 ISR(RTOS_ISR) //Событие таймера
 {
@@ -171,6 +171,29 @@ ISR (INT6_vect)
 	SetTimerTask(Process_CAN_Message,1);
 	LED_PORT0 ^= (1<<LED1);
 
+}
+
+void I2c_getter(void)
+{
+	UART_Add_Message("!!!MIRACLE!!!");
+}
+
+void I2c_SendAddr(uint8_t mode)
+{
+	IIC_Msg msg;
+	msg.addr=0x68;
+	msg.reg_addr=0;
+	msg.resume=i2c_sawsarp;
+	msg.count=7;
+	msg.waiter=&I2c_getter;
+	
+	Add_Task(msg);
+				TWCR = 	1<<TWSTA|
+				0<<TWSTO|
+				1<<TWINT|
+				1<<TWEN|
+				1<<TWIE;
+	
 }
 
 void reenable_ADC(void)
@@ -346,7 +369,8 @@ void Process_CAN_Message (void)
 
 void start_SPI()
 {
-	cli();UART_Add_Message("0-------");
+	cli();
+	UART_Add_Message("0-------");
 	
 	MCP2515_init(0);
 	UART_Add_Message("1--------");
@@ -354,8 +378,8 @@ void start_SPI()
 	UART_Add_Message("2--------");
 	MCP2515_init(2);
 	UART_Add_Message("3--------");
-//	SetTimerTask(renew_message,50);
-	EIMSK|=(1<<INT4)|(1<<INT5)|(1<<INT6);
+	SetTimerTask(renew_message,100);
+	EIMSK=112;
 	sei();
 }
 
@@ -391,6 +415,9 @@ void renew_message(void)
 	}
     send_message_monitor(0);
 	SetTimerTask(renew_message,	1000);
+	I2c_SendAddr(1);
+	UART_Add_Message("--------");
+
 	SREG=oldSREG;
 }
 
@@ -438,6 +465,9 @@ void return_state (void)
 	change_resend(stat);
 }
 
+
+
+
 int main(void)
 {	
 	button=0;
@@ -461,7 +491,7 @@ int main(void)
 	current_ADC_input=0;
 	ADC_ready=1;
 	reenable_ADC();
-	pushmedia();
+	//pushmedia();
 	//ADCSRA|=(1<<ADSC);
 	for (uint8_t i =0 ; i<Can_MAX;i++)
 	{
@@ -469,8 +499,9 @@ int main(void)
 	}
 	init_SPI();
 	start_SPI();
+	init_I2c();
 	//show_counter();
-		SetTask(Process_CAN_Message);
+	SetTask(Process_CAN_Message);
 	media_state_counter_resume=0;
 	media_state_counter=0;
 //	SetTask(count_media);
