@@ -144,6 +144,12 @@
     </ToolchainSettings>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AD5206.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="AD5206.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="AndroCar.c">
       <SubType>compile</SubType>
     </Compile>
@@ -154,6 +160,18 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="avrlibtypes.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="CSR8645.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="CSR8645.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Display.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Display.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="EERTOS.c">
@@ -177,7 +195,19 @@
     <Compile Include="main.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="MCP2515.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="MCP2515.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="mcp2515_defs.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="SPI.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="SPI.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="trash.c">
@@ -187,6 +217,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="TWI.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="UART.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="UART.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

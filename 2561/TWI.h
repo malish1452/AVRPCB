@@ -49,17 +49,21 @@ typedef struct
 {
 	uint8_t		addr;	
 	uint8_t		reg_addr;
-	uint8_t		data[7];
+	uint8_t		data[8];
 	uint8_t		index;
 	uint8_t		count;
 	uint8_t		resume;
-	
+	uint8_t		state;
 	IIC_F		waiter;
+	uint8_t		number;
 	
 } IIC_Msg;
 
 extern void IIC_done();
 extern void init_I2c();
 extern void Add_Task(IIC_Msg Msg);
+extern IIC_Msg Get_Msg(IIC_F waiter);
+extern void Delete_MSG(uint8_t index);
+extern void DoNothing(void);
 
 #endif /* TWI_H_ */

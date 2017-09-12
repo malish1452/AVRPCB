@@ -38,13 +38,19 @@ SUBDIRS :=  \
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
+../AD5206.c \
 ../AndroCar.c \
+../CSR8645.c \
+../Display.c \
 ../EERTOS.c \
 ../EERTOSHAL.c \
 ../HAL.c \
 ../main.c \
+../MCP2515.c \
+../SPI.c \
 ../trash.c \
-../TWI.c
+../TWI.c \
+../UART.c
 
 
 PREPROCESSING_SRCS += 
@@ -54,40 +60,64 @@ ASM_SRCS +=
 
 
 OBJS +=  \
+AD5206.o \
 AndroCar.o \
+CSR8645.o \
+Display.o \
 EERTOS.o \
 EERTOSHAL.o \
 HAL.o \
 main.o \
+MCP2515.o \
+SPI.o \
 trash.o \
-TWI.o
+TWI.o \
+UART.o
 
 OBJS_AS_ARGS +=  \
+AD5206.o \
 AndroCar.o \
+CSR8645.o \
+Display.o \
 EERTOS.o \
 EERTOSHAL.o \
 HAL.o \
 main.o \
+MCP2515.o \
+SPI.o \
 trash.o \
-TWI.o
+TWI.o \
+UART.o
 
 C_DEPS +=  \
+AD5206.d \
 AndroCar.d \
+CSR8645.d \
+Display.d \
 EERTOS.d \
 EERTOSHAL.d \
 HAL.d \
 main.d \
+MCP2515.d \
+SPI.d \
 trash.d \
-TWI.d
+TWI.d \
+UART.d
 
 C_DEPS_AS_ARGS +=  \
+AD5206.d \
 AndroCar.d \
+CSR8645.d \
+Display.d \
 EERTOS.d \
 EERTOSHAL.d \
 HAL.d \
 main.d \
+MCP2515.d \
+SPI.d \
 trash.d \
-TWI.d
+TWI.d \
+UART.d
 
 OUTPUT_FILE_PATH +=2561.elf
 
@@ -103,6 +133,18 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

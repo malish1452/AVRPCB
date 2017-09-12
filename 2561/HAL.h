@@ -5,6 +5,7 @@
  *  Author: malish
  */ 
 
+#define F_CPU 16000000L
 
 #ifndef HAL_H_
 #define HAL_H_
@@ -18,7 +19,8 @@
 #include <avr/wdt.h>
 
 //Clock Config
-#define F_CPU 16000000L
+#define HI(x) ((x)>>8)
+#define LO(x) ((x)& 0xFF)
 
 //System Timer Config
 #define Prescaler	  		64
@@ -26,10 +28,7 @@
 
 
 //USART Config
-#define baudrate 115200L
-#define bauddivider (F_CPU/(16*baudrate))  //somehow -1 brings errors on high speed;
-#define HI(x) ((x)>>8)
-#define LO(x) ((x)& 0xFF)
+
 
 
 
